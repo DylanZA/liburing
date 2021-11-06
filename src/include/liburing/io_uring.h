@@ -135,6 +135,7 @@ enum {
 
 #define IORING_SETUP_SQE128		(1U << 10) /* SQEs are 128 byte */
 #define IORING_SETUP_CQE32		(1U << 11) /* CQEs are 32 byte */
+#define IORING_SETUP_NO_MMAP		(1U << 12) /* application provides memory */
 
 enum io_uring_op {
 	IORING_OP_NOP,
@@ -295,7 +296,7 @@ struct io_sqring_offsets {
 	__u32 dropped;
 	__u32 array;
 	__u32 resv1;
-	__u64 resv2;
+	__u64 user_addr;
 };
 
 /*
@@ -314,7 +315,7 @@ struct io_cqring_offsets {
 	__u32 cqes;
 	__u32 flags;
 	__u32 resv1;
-	__u64 resv2;
+	__u64 user_addr;
 };
 
 /*
