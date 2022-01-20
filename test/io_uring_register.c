@@ -609,6 +609,50 @@ out:
 	return 0;
 }
 
+static size_t timeus(struct timespec t)
+{
+	return (size_t)t.tv_sec * 1000000 + t.tv_nsec / 1000;
+}
+
+static int
+test_unregister_speed(void)
+{
+	struct timespec start, end;
+	struct io_uring_params p;
+	int fd, ret;
+	struct iovec iov;
+	size_t diff;
+	void *buf;
+
+	memset(&p, 0, sizeof(p));
+	fd = new_io_uring(1, &p);
+
+	buf = t_malloc(pagesize);
+	iov.iov_base = buf;
+	iov.iov_len = pagesize;
+
+	ret = __sys_io_uring_register(fd, IORING_REGISTER_BUFFERS, &iov, 1);
+	if (ret) {
+		fprintf(stderr, "error registering buffers\n");
+		goto done;
+	}
+
+	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+	__sys_io_uring_register(fd, IORING_UNREGISTER_BUFFERS, 0, 0);
+	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+	diff = timeus(end) - timeus(start);
+
+	/* 500ms should be enough to deregister any buffers */
+	ret =  diff > 500000 ? -1 : 0;
+
+	fprintf(stderr, "took %lu us to unregister buffers: %s\n",
+		diff, ret ? "FAIL" : "PASS");
+done:
+	free(buf);
+	close(fd);
+	return ret;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -659,6 +703,8 @@ main(int argc, char **argv)
 	close(fd);
 	/* uring poll on the uring fd */
 	status |= test_poll_ringfd();
+
+	status |= test_unregister_speed();
 
 	if (!status)
 		printf("PASS\n");
