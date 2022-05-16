@@ -313,7 +313,7 @@ static int __io_uring_queue_init_params(unsigned entries, struct io_uring *ring,
 	fd = ____sys_io_uring_setup(entries, p);
 	if (fd < 0) {
 		if ((p->flags & IORING_SETUP_NO_MMAP) &&
-		    !(ring->flags & INT_FLAG_APP_MEM)) {
+		    !(ring->int_flags & INT_FLAG_APP_MEM)) {
 			__sys_munmap(ring->sq.sqes, huge_page_size);
 			io_uring_unmap_rings(&ring->sq, &ring->cq);
 		}
