@@ -23,6 +23,8 @@
 /test/*.dmesg
 /test/output/
 
+/benchmark/*.b
+
 config-host.h
 config-host.mak
 config.log

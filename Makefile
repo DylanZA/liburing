@@ -10,6 +10,7 @@ all:
 	@$(MAKE) -C src
 	@$(MAKE) -C test
 	@$(MAKE) -C examples
+	@$(MAKE) -C benchmark
 
 .PHONY: all install default clean test
 .PHONY: FORCE cscope
@@ -67,6 +68,7 @@ clean:
 	@$(MAKE) -C src clean
 	@$(MAKE) -C test clean
 	@$(MAKE) -C examples clean
+	@$(MAKE) -C benchmark clean
 
 cscope:
 	@cscope -b -R
