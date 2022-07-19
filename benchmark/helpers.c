@@ -53,6 +53,7 @@ static void run_one(benchmark_init_user init, benchmark_run run,
 	ctx.loop.end = start + ctx.run_ms;
 	if (ctx.log_continuously)
 		ctx.loop.next_log = start + 1000;
+
 	ret = run(&ctx, user);
 	end = current_time_ms();
 	if (end == start)

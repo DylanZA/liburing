@@ -35,7 +35,7 @@ override LDFLAGS += -L../src/ -luring -lpthread
 # Please keep this list sorted alphabetically.
 bench_srcs := \
 	nop.c \
-	poll.c \
+	nop.c \
 	tw.c \
 	recvmsg.c \
 	# EOL
@@ -48,15 +48,7 @@ bench_targets := $(patsubst %.cc,%,$(bench_targets))
 bench_targets := $(patsubst %,%.b,$(bench_targets))
 all_targets += $(bench_targets)
 
-#
-# Build ../src/syscall.c manually from test's Makefile to support
-# liburing nolibc.
-#
-# Functions in ../src/syscall.c require libc to work with, if we
-# build liburing without libc, we don't have those functions
-# in liburing.a. So build it manually here.
-#
-helpers = helpers.o ../src/syscall.o ../test/helpers.o
+helpers = helpers.o ../test/helpers.o
 
 all: $(bench_targets)
 

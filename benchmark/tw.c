@@ -26,6 +26,7 @@ struct param {
 	bool coop;
 	bool multithread;
 	int batch;
+	bool single;
 };
 
 struct event_ctx;
@@ -136,6 +137,10 @@ int init(struct benchmark_ctx *ctx, void **user)
 		return -ENOMEM;
 	if (p->coop)
 		flags |= IORING_SETUP_COOP_TASKRUN;
+	if (p->single) {
+		flags |= IORING_SETUP_SINGLE_ISSUER;
+		flags |= (1U << 13);
+	}
 	if (basic_benchmark_init_flags(ctx, (void **)&b->basic, flags)) {
 		free(b);
 		return -1;
@@ -274,11 +279,31 @@ int main(int argc, char *argv[])
 {
 	/* CQE/SQE size is 2xcount per loop */
 	struct param params[] = {
+		{ .base = basic_benchmark_params("32 Batch 1 COOP MULTITHREAD SINGLE", 64, 64),
+		  .batch = 1,
+		  .coop = true,
+		  .multithread = true,
+		  .single = true
+		},
+		{ .base = basic_benchmark_params("32 Batch 32 COOP MULTITHREAD SINGLE", 64, 64),
+		  .batch = 32,
+		  .coop = true,
+		  .multithread = true,
+		  .single = true
+		},
 		{ .base = basic_benchmark_params("16 Batch 1", 32, 32),
 		  .batch = 1
 		},
 		{ .base = basic_benchmark_params("16 Batch 16", 32, 32),
 		  .batch = 16,
+		},
+		{ .base = basic_benchmark_params("16 Batch 1 SINGLE", 32, 32),
+		  .batch = 1,
+		  .single = true,
+		},
+		{ .base = basic_benchmark_params("16 Batch 16 SINGLE", 32, 32),
+		  .batch = 16,
+		  .single = true,
 		},
 		{ .base = basic_benchmark_params("16 Batch 1 COOP", 32, 32),
 		  .batch = 1,

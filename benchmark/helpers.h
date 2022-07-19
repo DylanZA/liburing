@@ -53,12 +53,23 @@ bool loop_check_slow(struct benchmark_ctx *ctx, unsigned int count);
 
 #define BENCH_LOOP_END(ctx, count)                                             \
 	}                                                                      \
-	while (loop_check((ctx), (count)*BENCH_LOOP_OUTER))
+	while (loop_check((ctx), (count)*BENCH_LOOP_OUTER, BENCH_LOOP_OUTER))
 
-static inline bool loop_check(struct benchmark_ctx *ctx, unsigned int count)
+#define BENCH_LOOP_SLOW_OUTER (1 << 4)
+#define BENCH_LOOP_SLOW_START()                                                     \
+	do {                                                                   \
+		uint64_t __outer;                                              \
+		for (__outer = 0; __outer < BENCH_LOOP_SLOW_OUTER; __outer++)
+
+
+#define BENCH_LOOP_SLOW_END(ctx, count)                                             \
+	}                                                                      \
+	while (loop_check((ctx), (count)*BENCH_LOOP_SLOW_OUTER, BENCH_LOOP_SLOW_OUTER ))
+
+static inline bool loop_check(struct benchmark_ctx *ctx, unsigned int count, unsigned int max_loop_count)
 {
 	ctx->loop.outer_count += count;
-	if (__builtin_expect(ctx->loop.outer_count < (BENCH_LOOP_OUTER), 1))
+	if (__builtin_expect(ctx->loop.outer_count < max_loop_count, 1))
 		return true;
 	ctx->loop.outer_count = 0;
 	return loop_check_slow(ctx, count);
