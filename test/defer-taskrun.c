@@ -102,9 +102,6 @@ static int test_eventfd(void)
 	/* can take time due to rcu_call */
 	CHECK(can_read_t(fda, 1000));
 
-	/* should not have processed the cqe yet */
-	CHECK(io_uring_cq_ready(&ring) == 0);
-
 	io_uring_get_events(&ring);
 	CHECK(io_uring_cq_ready(&ring) == 1);
 
