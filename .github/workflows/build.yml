@@ -24,7 +24,7 @@ jobs:
           - arch: x86_64
             cc_pkg: clang
             cxx_pkg: clang
-            cc: clang
+            cc: clang -Wshorten-64-to-32 -Werror
             cxx: clang++
 
           # x86 (32-bit) gcc
