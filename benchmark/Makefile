@@ -35,7 +35,8 @@ override LDFLAGS += -L../src/ -luring -lpthread
 # Please keep this list sorted alphabetically.
 bench_srcs := \
 	nop.c \
-	nop.c \
+	poll.c \
+	reg.c \
 	tw.c \
 	recvmsg.c \
 	# EOL
