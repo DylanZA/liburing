@@ -33,6 +33,7 @@ struct benchmark_opts {
 	const char *select_name;
 	int select_idx;
 	bool list;
+	int runs;
 };
 
 struct benchmark_ctx {

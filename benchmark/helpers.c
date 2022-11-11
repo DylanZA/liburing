@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <assert.h>
 
 static uint64_t current_time_ms(void)
 {
@@ -34,38 +35,61 @@ bool loop_check_slow(struct benchmark_ctx *ctx, unsigned int count)
 	return ret;
 }
 
-static void run_one(benchmark_init_user init, benchmark_run run,
-		    benchmark_teardown_user teardown,
-		    struct benchmark_parameter *param,
-		    struct benchmark_ctx ctx)
-{
+struct run_result {
 	int ret;
+	uint64_t end;
+	uint64_t start;
+	uint64_t count;
+};
+
+static uint64_t run_res_k_per(struct run_result const *r)
+{
+	if (r->end == r->start)
+		return 0;
+	return r->count / (r->end - r->start);
+}
+
+static uint64_t avg_run_res_k_per(struct run_result const *r, int n)
+{
+	uint64_t acc = 0;
+	int i;
+
+	if (n <= 0)
+		return 0;
+
+	for (i = 0; i < n; i++)
+		acc += run_res_k_per(r + i);
+
+	return acc / n;
+}
+
+
+static struct run_result _run_one(benchmark_init_user init, benchmark_run run,
+				  benchmark_teardown_user teardown,
+				  struct benchmark_parameter *param,
+				  struct benchmark_ctx ctx)
+{
 	ctx.param = param;
 	ctx.loop = (struct benchmark_loop_ctx){};
 
 	void *user = NULL;
-	uint64_t start, end;
+	struct run_result res = {};
 
-	ret = init(&ctx, &user);
-	if (ret)
+	res.ret = init(&ctx, &user);
+	if (res.ret)
 		goto err;
-	start = current_time_ms();
-	ctx.loop.end = start + ctx.run_ms;
+	res.start = current_time_ms();
+	ctx.loop.end = res.start + ctx.run_ms;
 	if (ctx.log_continuously)
-		ctx.loop.next_log = start + 1000;
+		ctx.loop.next_log = res.start + 1000;
 
-	ret = run(&ctx, user);
-	end = current_time_ms();
-	if (end == start)
-		end++;
+	res.ret = run(&ctx, user);
+	res.end = current_time_ms();
 
 	teardown(&ctx, user);
+	res.count = ctx.loop.count;
 err:
-	if (ret)
-		fprintf(stderr, "\t%-30s\tfailed (%d)\n", param->name, ret);
-	else
-		fprintf(stderr, "\t%-30s\t%llu k/s\n", param->name,
-			(ctx.loop.count / (end - start)));
+	return res;
 }
 
 struct benchmark_opts parse_benchmark_opts(int argc, char *argv[])
@@ -73,10 +97,11 @@ struct benchmark_opts parse_benchmark_opts(int argc, char *argv[])
 	struct benchmark_opts opts = {
 		.select_idx = -1,
 		.run_ms = 2000,
+		.runs = 1,
 	};
 	int opt;
 
-	while ((opt = getopt(argc, argv, "lt:s:n:")) != -1) {
+	while ((opt = getopt(argc, argv, "lt:s:n:r:")) != -1) {
 		switch (opt) {
 		case 'l':
 			opts.list = true;
@@ -91,14 +116,66 @@ struct benchmark_opts parse_benchmark_opts(int argc, char *argv[])
 		case 't':
 			opts.run_ms = atoi(optarg);
 			break;
+		case 'r':
+			opts.runs = atoi(optarg);
+			break;
 		default:
 			fprintf(stderr,
-				"Usage: %s [-t msecs] [-s select] [-l]\n",
+				"Usage: %s [-t msecs] [-s select] [-r runs] [-l]\n",
 				argv[0]);
 			exit(-1);
 		}
 	}
 	return opts;
+}
+
+static int rescomp(void const* va, void const* vb)
+{
+	struct run_result const *a = va;
+	struct run_result const *b = vb;
+	uint64_t ra = run_res_k_per(a);
+	uint64_t rb = run_res_k_per(b);
+	if (ra < rb)
+		return -1;
+	if (rb < ra)
+		return 1;
+	return 0;
+}
+
+static void run_one(struct benchmark_opts *opts, benchmark_init_user init, benchmark_run run,
+		    benchmark_teardown_user teardown,
+		    struct benchmark_parameter *param)
+{
+	int i;
+	struct run_result *res = (struct run_result *)malloc(sizeof(*res) * opts->runs);
+	struct benchmark_ctx base = {
+		.run_ms = opts->run_ms,
+		.log_continuously = opts->select_idx >= 0,
+	};
+
+	assert(res);
+
+	for (i = 0; i < opts->runs; i++) {
+		res[i] = _run_one(init, run, teardown, param, base);
+		if (res[i].ret) {
+			fprintf(stderr, "\t%-30s\tfailed (%d) (run %d)\n", param->name, res[i].ret, i);
+			goto cleanup;
+		}
+	}
+
+	qsort(res, opts->runs, sizeof(*res), rescomp);
+
+	fprintf(stderr, "\t%-30s\t", param->name);
+	fprintf(stderr, "%lu k/s", avg_run_res_k_per(res, opts->runs));
+	if (opts->runs > 1) {
+		fprintf(stderr, " p0=%lu k/s p50=%lu k/s p100=%lu k/s",
+			run_res_k_per(res),
+			run_res_k_per(res + (opts->runs / 2)),
+			run_res_k_per(res + opts->runs - 1));
+	}
+	fprintf(stderr, "\n");
+cleanup:
+	free(res);
 }
 
 void run_benchmark(struct benchmark_opts *opts, const char *name,
@@ -109,15 +186,9 @@ void run_benchmark(struct benchmark_opts *opts, const char *name,
 {
 	int select = opts->select_idx;
 	int i;
-	struct benchmark_ctx base = {
-		.run_ms = opts->run_ms,
-	};
 
 	if (opts->select_name && strcmp(name, opts->select_name))
 		return;
-
-	if (select >= 0)
-		base.log_continuously = true;
 
 	fprintf(stderr, "%s:\n", name);
 	for (i = 0; param->name;
@@ -131,7 +202,7 @@ void run_benchmark(struct benchmark_opts *opts, const char *name,
 		}
 		if (select >= 0)
 			fprintf(stderr, "selecting %d: %s\n", i, param->name);
-		run_one(init, run, teardown, param, base);
+		run_one(opts, init, run, teardown, param);
 	}
 }
 
