@@ -21,6 +21,9 @@
 #include <linux/time_types.h>
 #endif
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -678,5 +681,7 @@ struct io_uring_recvmsg_out {
 #ifdef __cplusplus
 }
 #endif
+
+#pragma GCC diagnostic pop
 
 #endif

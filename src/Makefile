@@ -9,7 +9,7 @@ LIBURING_CFLAGS ?=
 CPPFLAGS ?=
 override CPPFLAGS += -D_GNU_SOURCE \
 	-Iinclude/ -include ../config-host.h
-CFLAGS ?= -g -O3 -Wall -Wextra -fno-stack-protector
+CFLAGS ?= -g -O3 -Wall -Wextra -Wpedantic -fno-stack-protector
 override CFLAGS += -Wno-unused-parameter -Wno-sign-compare \
 	-DLIBURING_INTERNAL \
 	$(LIBURING_CFLAGS)

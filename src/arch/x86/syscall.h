@@ -4,6 +4,10 @@
 #define LIBURING_ARCH_X86_SYSCALL_H
 
 #if defined(__x86_64__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+
 /**
  * Note for syscall registers usage (x86-64):
  *   - %rax is the syscall number.
@@ -290,6 +294,8 @@
 #include "../generic/syscall.h"
 
 #endif /* #ifdef CONFIG_NOLIBC */
+
+#pragma GCC diagnostic pop
 
 #endif /* #if defined(__x86_64__) */
 

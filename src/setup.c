@@ -8,6 +8,8 @@
 #include "liburing/compat.h"
 #include "liburing/io_uring.h"
 
+#define io_uring_offset_ptr(q, diff) ((void*)((uintptr_t)sq->ring_ptr + diff))
+
 static void io_uring_unmap_rings(struct io_uring_sq *sq, struct io_uring_cq *cq)
 {
 	__sys_munmap(sq->ring_ptr, sq->ring_sz);
@@ -52,13 +54,13 @@ static int io_uring_mmap(int fd, struct io_uring_params *p,
 		}
 	}
 
-	sq->khead = sq->ring_ptr + p->sq_off.head;
-	sq->ktail = sq->ring_ptr + p->sq_off.tail;
-	sq->kring_mask = sq->ring_ptr + p->sq_off.ring_mask;
-	sq->kring_entries = sq->ring_ptr + p->sq_off.ring_entries;
-	sq->kflags = sq->ring_ptr + p->sq_off.flags;
-	sq->kdropped = sq->ring_ptr + p->sq_off.dropped;
-	sq->array = sq->ring_ptr + p->sq_off.array;
+	sq->khead = io_uring_offset_ptr(sq, p->sq_off.head);
+	sq->ktail = io_uring_offset_ptr(sq, p->sq_off.tail);
+	sq->kring_mask = io_uring_offset_ptr(sq, p->sq_off.ring_mask);
+	sq->kring_entries = io_uring_offset_ptr(sq, p->sq_off.ring_entries);
+	sq->kflags = io_uring_offset_ptr(sq, p->sq_off.flags);
+	sq->kdropped = io_uring_offset_ptr(sq, p->sq_off.dropped);
+	sq->array = io_uring_offset_ptr(sq, p->sq_off.array);
 
 	size = sizeof(struct io_uring_sqe);
 	if (p->flags & IORING_SETUP_SQE128)
@@ -72,14 +74,14 @@ err:
 		return ret;
 	}
 
-	cq->khead = cq->ring_ptr + p->cq_off.head;
-	cq->ktail = cq->ring_ptr + p->cq_off.tail;
-	cq->kring_mask = cq->ring_ptr + p->cq_off.ring_mask;
-	cq->kring_entries = cq->ring_ptr + p->cq_off.ring_entries;
-	cq->koverflow = cq->ring_ptr + p->cq_off.overflow;
-	cq->cqes = cq->ring_ptr + p->cq_off.cqes;
+	cq->khead = io_uring_offset_ptr(cq, p->cq_off.head);
+	cq->ktail = io_uring_offset_ptr(cq, p->cq_off.tail);
+	cq->kring_mask = io_uring_offset_ptr(cq, p->cq_off.ring_mask);
+	cq->kring_entries = io_uring_offset_ptr(cq, p->cq_off.ring_entries);
+	cq->koverflow = io_uring_offset_ptr(cq, p->cq_off.overflow);
+	cq->cqes = io_uring_offset_ptr(cq, p->cq_off.cqes);
 	if (p->cq_off.flags)
-		cq->kflags = cq->ring_ptr + p->cq_off.flags;
+		cq->kflags = io_uring_offset_ptr(cq, p->cq_off.flags);
 
 	sq->ring_mask = *sq->kring_mask;
 	sq->ring_entries = *sq->kring_entries;
