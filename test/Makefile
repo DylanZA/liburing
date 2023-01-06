@@ -154,6 +154,7 @@ test_srcs := \
 	sigfd-deadlock.c \
 	single-issuer.c \
 	skip-cqe.c \
+	skip-min-events.c \
 	socket.c \
 	socket-rw.c \
 	socket-rw-eagain.c \
